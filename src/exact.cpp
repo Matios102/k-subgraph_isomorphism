@@ -170,7 +170,7 @@ void run_exact_algorithm(const std::string &inputPath,
     {
         for (int j = 0; j < H.n; ++j)
         {
-            (*out) << minExtension[i][j];
+            (*out) << minExtension[i][j] + H.A[i][j];
             if (j + 1 < H.n)
                 (*out) << " ";
         }
