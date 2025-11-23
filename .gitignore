@@ -37,5 +37,14 @@
 *.out
 *.app
 
+# Bin
+aac
+
 # debug information files
 *.dwo
+
+# vscode settings
+.vscode/
+
+# macOS files
+.DS_Store
