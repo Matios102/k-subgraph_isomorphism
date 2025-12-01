@@ -258,8 +258,8 @@ Graph approx_k_extension(const Graph &G,
                 {
                     int x = f[u];
                     int y = f[v];
-                    int delta = std::max(0, A_G[u][v] - A_H[x][y]);
-                    A_H[x][y] += delta;
+
+                    A_H[x][y] += A_G[u][v];
                 }
             }
         }
@@ -286,7 +286,7 @@ void run_approx_algorithm(const std::string &inputPath,
 {
     auto [G, H] = read_input_file(inputPath);
 
-    Graph H_prime = approx_k_extension(G, H, k);
+    Graph extension = approx_k_extension(G, H, k);
 
     std::ostream *out = &std::cout;
     std::ofstream fileOut;
@@ -300,15 +300,12 @@ void run_approx_algorithm(const std::string &inputPath,
         out = &fileOut;
     }
 
-    int nH = H_prime.n;
-    const auto &A_H = H_prime.A;
-
-    for (int i = 0; i < nH; ++i)
+    for (int i = 0; i < H.n; ++i)
     {
-        for (int j = 0; j < nH; ++j)
+        for (int j = 0; j < H.n; ++j)
         {
-            (*out) << A_H[i][j];
-            if (j + 1 < nH)
+            (*out) << extension.A[i][j];
+            if (j + 1 < H.n)
                 (*out) << " ";
         }
         (*out) << "\n";
