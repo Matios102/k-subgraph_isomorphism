@@ -48,3 +48,6 @@ aac
 
 # macOS files
 .DS_Store
+
+# Windows release
+release/
