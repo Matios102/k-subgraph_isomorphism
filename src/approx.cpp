@@ -12,6 +12,10 @@ using CostType = long long;
 static constexpr CostType INF_COST =
     std::numeric_limits<CostType>::max() / 4;
 
+// Penalty factor for reusing the same (u, v)
+const CostType REUSE_PENALTY = 1000;
+
+
 static std::pair<int, int> DegreeSignature(const std::vector<std::vector<int>> &A,
                                            int v)
 {
@@ -206,13 +210,8 @@ Graph approx_k_extension(const Graph &G,
     // Soft reuse-count for (u,v) pairs: how many times we mapped u -> v
     std::vector<std::vector<int>> UsedCount(nG, std::vector<int>(nH, 0));
 
-    // Penalty factor for reusing the same (u, v)
-    // Just needs to be "big enough" relative to degree differences.
-    const CostType REUSE_PENALTY = 1000;
-
     for (int iter = 1; iter <= k; ++iter)
     {
-        // 1. Degree signatures
         std::vector<std::pair<int, int>> sigG(nG);
         std::vector<std::pair<int, int>> sigH(nH);
 
@@ -225,8 +224,7 @@ Graph approx_k_extension(const Graph &G,
             sigH[v] = DegreeSignature(A_H, v);
         }
 
-        // 2. Cost matrix: degree-diff + soft penalty for reusing (u,v)
-        std::vector<std::vector<CostType>> C(nG, std::vector<CostType>(nH, 0));
+        std::vector<std::vector<CostType>> CostMatrix(nG, std::vector<CostType>(nH, 0));
 
         for (int u = 0; u < nG; ++u)
         {
@@ -248,14 +246,12 @@ Graph approx_k_extension(const Graph &G,
                 CostType val = degCost + penalty;
                 if (val > INF_COST)
                     val = INF_COST;
-                C[u][v] = val;
+                CostMatrix[u][v] = val;
             }
         }
 
-        // 3. Get an embedding from Hungarian
-        std::vector<int> f = hungarian_min_cost_injective_assignment(C);
+        std::vector<int> f = hungarian_min_cost_injective_assignment(CostMatrix);
 
-        // 4. Standard delta-update so that this embedding is realizable
         for (int u = 0; u < nG; ++u)
         {
             for (int v = 0; v < nG; ++v)
@@ -265,14 +261,13 @@ Graph approx_k_extension(const Graph &G,
                     int x = f[u];
                     int y = f[v];
 
-                    // Need at least A_G[u][v] edges in H_mod[x][y]
                     int delta = std::max(0, A_G[u][v] - A_H[x][y]);
                     A_H[x][y] += delta;
                 }
             }
         }
 
-        // 5. Check how many times this exact mapping appeared before
+        // Check how many times this exact mapping appeared before
         int sameCount = 0;
         for (const auto &prev : Embeddings)
         {
@@ -295,8 +290,6 @@ Graph approx_k_extension(const Graph &G,
                         int x = f[u];
                         int y = f[v];
 
-                        // Required multiplicity for this edge in H:
-                        // (sameCount + 1) copies of the G-edge.
                         int required = (sameCount + 1) * A_G[u][v];
                         if (A_H[x][y] < required)
                         {
@@ -308,7 +301,7 @@ Graph approx_k_extension(const Graph &G,
             }
         }
 
-        // 6. Update reuse counts and store this embedding
+        // Update reuse counts and store this embedding
         for (int u = 0; u < nG; ++u)
         {
             int v = f[u];
