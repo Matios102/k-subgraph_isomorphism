@@ -49,9 +49,8 @@ static Matrix EnumerateMappings(const Graph &G, const Graph &H)
     return allMappings;
 }
 
-
 static void generateMultiComb_rec(
-    int m,          // number of mappings
+    int numMappings,
     int k,
     int start,
     std::vector<int> &current,
@@ -62,11 +61,11 @@ static void generateMultiComb_rec(
         allComb.push_back(current);
         return;
     }
-    for (int i = start; i < m; ++i)
+    for (int i = start; i < numMappings; ++i)
     {
         current.push_back(i);
         // i (not i+1) allows repetition
-        generateMultiComb_rec(m, k, i, current, allComb);
+        generateMultiComb_rec(numMappings, k, i, current, allComb);
         current.pop_back();
     }
 }
@@ -83,7 +82,6 @@ static Matrix MultiCombinationsWithRepetition(int numMappings, int k)
     generateMultiComb_rec(numMappings, k, 0, current, allComb);
     return allComb;
 }
-
 
 Matrix exact_minimal_k_extension(
     const Graph &G,
@@ -102,26 +100,26 @@ Matrix exact_minimal_k_extension(
     }
 
     // All k-multicombinations with repetition of mapping indices
-    Matrix allComb = MultiCombinationsWithRepetition(numMappings, k);
+    Matrix allCombinations = MultiCombinationsWithRepetition(numMappings, k);
 
     long long minCost = std::numeric_limits<long long>::max();
     int nH = H.n;
     Matrix minExtension(nH, std::vector<int>(nH, 0));
 
-    for (const auto &combIndices : allComb)
+    for (const auto &combIndices : allCombinations)
     {
         // multiplicity of each mapping i in this multiset
-        std::vector<int> mult(numMappings, 0);
+        std::vector<int> multiplicity(numMappings, 0);
         for (int idx : combIndices)
         {
-            ++mult[idx];
+            ++multiplicity[idx];
         }
 
         Matrix demandMax(nH, std::vector<int>(nH, 0));
 
         for (int i = 0; i < numMappings; ++i)
         {
-            int mi = mult[i];
+            int mi = multiplicity[i];
             if (mi == 0)
                 continue;
 
