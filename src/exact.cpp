@@ -7,8 +7,6 @@
 #include <stdexcept>
 #include <vector>
 
-// ----- Mapping enumeration (unchanged) -----
-
 static void EnumerateMappings_rec(
     int mappedCount,
     const Graph &G,
@@ -51,9 +49,7 @@ static Matrix EnumerateMappings(const Graph &G, const Graph &H)
     return allMappings;
 }
 
-// ----- k-multicombinations of mappings (with repetition) -----
 
-// current holds indices of mappings, non-decreasing to avoid permutations
 static void generateMultiComb_rec(
     int m,          // number of mappings
     int k,
@@ -88,7 +84,6 @@ static Matrix MultiCombinationsWithRepetition(int numMappings, int k)
     return allComb;
 }
 
-// ----- Exact minimal k-extension with multiplicity -----
 
 Matrix exact_minimal_k_extension(
     const Graph &G,
@@ -98,19 +93,15 @@ Matrix exact_minimal_k_extension(
     const auto &A_G = G.A;
     const auto &A_H = H.A;
 
-    // All injective vertex mappings G -> H
     Matrix Mapping = EnumerateMappings(G, H);
     int numMappings = static_cast<int>(Mapping.size());
 
     if (numMappings == 0)
     {
-        // No injective mapping at all; no extension can realize any embedding.
-        // You can choose to throw or return "no change".
-        Matrix noExt(H.n, std::vector<int>(H.n, 0));
-        return noExt;
+        throw std::runtime_error("No valid mappings from G to H exist.");
     }
 
-    // All k-multicombinations (with repetition) of mapping indices
+    // All k-multicombinations with repetition of mapping indices
     Matrix allComb = MultiCombinationsWithRepetition(numMappings, k);
 
     long long minCost = std::numeric_limits<long long>::max();
@@ -126,10 +117,7 @@ Matrix exact_minimal_k_extension(
             ++mult[idx];
         }
 
-        // requiredEdges[x][y] we will compute as:
-        //   requiredEdges[x][y] = max(0, max_i ( mult[i] * demand_i(x,y) ) - A_H[x][y] )
-        // where demand_i(x,y) is how many G-edges mapping i sends to (x,y).
-        Matrix demandMax(nH, std::vector<int>(nH, 0)); // stores max_i mult[i]*demand_i(x,y)
+        Matrix demandMax(nH, std::vector<int>(nH, 0));
 
         for (int i = 0; i < numMappings; ++i)
         {
@@ -139,7 +127,6 @@ Matrix exact_minimal_k_extension(
 
             const std::vector<int> &f = Mapping[i];
 
-            // For this mapping f, first compute demand_i(x,y)
             Matrix demand_i(nH, std::vector<int>(nH, 0));
 
             for (int u = 0; u < G.n; ++u)
@@ -155,7 +142,6 @@ Matrix exact_minimal_k_extension(
                 }
             }
 
-            // Scale by multiplicity mi and update global max
             for (int x = 0; x < nH; ++x)
             {
                 for (int y = 0; y < nH; ++y)
