@@ -12,6 +12,9 @@ using CostType = long long;
 static constexpr CostType INF_COST =
     std::numeric_limits<CostType>::max() / 4;
 
+// Penalty factor for reusing the same (u, v)
+const CostType REUSE_PENALTY = 1000;
+
 
 static std::pair<int, int> DegreeSignature(const std::vector<std::vector<int>> &A,
                                            int v)
@@ -93,7 +96,6 @@ static std::vector<int> hungarian_min_cost_injective_assignment(
             if (qHead >= static_cast<int>(queue.size()))
             {
                 // If queue is empty, we still need to adjust labels using minSlack.
-                // This situation is handled by directly proceeding to choosing v*.
             }
             else
             {
@@ -182,7 +184,6 @@ static std::vector<int> hungarian_min_cost_injective_assignment(
     return f;
 }
 
-
 Graph approx_k_extension(const Graph &G,
                          const Graph &H,
                          int k)
@@ -203,9 +204,11 @@ Graph approx_k_extension(const Graph &G,
     int nG = G.n;
     int nH = H.n;
 
-    std::vector<std::vector<bool>> UsedPairs(nG, std::vector<bool>(nH, false));
-
+    // Store all previously found embeddings
     std::vector<std::vector<int>> Embeddings;
+
+    // Soft reuse-count for (u,v) pairs: how many times we mapped u -> v
+    std::vector<std::vector<int>> UsedCount(nG, std::vector<int>(nH, 0));
 
     for (int iter = 1; iter <= k; ++iter)
     {
@@ -221,7 +224,7 @@ Graph approx_k_extension(const Graph &G,
             sigH[v] = DegreeSignature(A_H, v);
         }
 
-        std::vector<std::vector<CostType>> C(nG, std::vector<CostType>(nH, 0));
+        std::vector<std::vector<CostType>> CostMatrix(nG, std::vector<CostType>(nH, 0));
 
         for (int u = 0; u < nG; ++u)
         {
@@ -233,22 +236,21 @@ Graph approx_k_extension(const Graph &G,
                 int d_out_H = sigH[v].first;
                 int d_in_H = sigH[v].second;
 
-                CostType val =
+                CostType degCost =
                     static_cast<CostType>(std::llabs(static_cast<long long>(d_out_G - d_out_H))) +
                     static_cast<CostType>(std::llabs(static_cast<long long>(d_in_G - d_in_H)));
 
-                if (UsedPairs[u][v])
-                {
-                    C[u][v] = INF_COST;
-                }
-                else
-                {
-                    C[u][v] = val;
-                }
+                CostType penalty =
+                    static_cast<CostType>(UsedCount[u][v]) * REUSE_PENALTY;
+
+                CostType val = degCost + penalty;
+                if (val > INF_COST)
+                    val = INF_COST;
+                CostMatrix[u][v] = val;
             }
         }
 
-        std::vector<int> f = hungarian_min_cost_injective_assignment(C);
+        std::vector<int> f = hungarian_min_cost_injective_assignment(CostMatrix);
 
         for (int u = 0; u < nG; ++u)
         {
@@ -259,17 +261,53 @@ Graph approx_k_extension(const Graph &G,
                     int x = f[u];
                     int y = f[v];
 
-                    A_H[x][y] += A_G[u][v];
+                    int delta = std::max(0, A_G[u][v] - A_H[x][y]);
+                    A_H[x][y] += delta;
                 }
             }
         }
 
+        // Check how many times this exact mapping appeared before
+        int sameCount = 0;
+        for (const auto &prev : Embeddings)
+        {
+            if (prev == f)
+            {
+                ++sameCount;
+            }
+        }
+
+        // If this mapping already appeared `sameCount` times,
+        // ensure enough multiplicity so sameCount+1 "copies" can be distinguished
+        if (sameCount > 0)
+        {
+            for (int u = 0; u < nG; ++u)
+            {
+                for (int v = 0; v < nG; ++v)
+                {
+                    if (A_G[u][v] > 0)
+                    {
+                        int x = f[u];
+                        int y = f[v];
+
+                        int required = (sameCount + 1) * A_G[u][v];
+                        if (A_H[x][y] < required)
+                        {
+                            int extra = required - A_H[x][y];
+                            A_H[x][y] += extra;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Update reuse counts and store this embedding
         for (int u = 0; u < nG; ++u)
         {
             int v = f[u];
             if (v >= 0 && v < nH)
             {
-                UsedPairs[u][v] = true;
+                UsedCount[u][v] += 1;
             }
         }
 
@@ -279,12 +317,21 @@ Graph approx_k_extension(const Graph &G,
     return H_mod;
 }
 
-
 void run_approx_algorithm(const std::string &inputPath,
                           const std::optional<std::string> &outputPath,
                           int k)
 {
+    if (k <= 0)
+    {
+        throw std::runtime_error("k must be positive.");
+    }
+
     auto [G, H] = read_input_file(inputPath);
+
+    if (G.n > H.n)
+    {
+        throw std::runtime_error("Graph G must not have more vertices than H.");
+    }
 
     Graph extension = approx_k_extension(G, H, k);
 
