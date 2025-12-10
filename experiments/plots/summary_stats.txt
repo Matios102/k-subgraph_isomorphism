@@ -1,0 +1,38 @@
+============================================================
+k-Subgraph Isomorphism Experiment Summary
+============================================================
+
+Total experiments: 7200
+  - Exact: 2250
+  - Approx: 4950
+  - Successful: 5463
+  - Timeouts: 1
+
+Execution Time Statistics:
+----------------------------------------
+
+EXACT:
+  Mean: 2.924395s
+  Median: 0.035328s
+  Std: 12.036646s
+  Min: 0.002272s
+  Max: 86.344404s
+
+APPROX:
+  Mean: 0.003194s
+  Median: 0.002856s
+  Std: 0.001515s
+  Min: 0.002145s
+  Max: 0.036370s
+
+
+Extension Cost Comparison:
+----------------------------------------
+
+Paired comparisons: 513
+Approx matches exact: 134 (26.1%)
+
+Approximation Ratio:
+  Mean: 2.348
+  Median: 1.363
+  Max: 17.000

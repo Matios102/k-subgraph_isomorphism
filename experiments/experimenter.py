@@ -409,13 +409,13 @@ def main():
     parser.add_argument(
         "--exact-timeout",
         type=float,
-        default=240.0,
+        default=300.0,
         help="Timeout in seconds for exact algorithm"
     )
     parser.add_argument(
         "--approx-timeout",
         type=float,
-        default=240.0,
+        default=300.0,
         help="Timeout in seconds for approx algorithm"
     )
     parser.add_argument(
