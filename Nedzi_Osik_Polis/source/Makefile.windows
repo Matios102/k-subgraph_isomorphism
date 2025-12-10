@@ -1,7 +1,7 @@
-# Windows x86_64 Cross-Compilation Makefile
-# Uses MinGW-w64 to create standalone Windows executables
+# Windows Native Compilation Makefile
+# Uses MinGW-w64 g++ to create standalone Windows executables
 
-CC := x86_64-w64-mingw32-g++
+CC := g++
 CXXFLAGS := -std=c++20 -Wall -Iinclude -static-libgcc -static-libstdc++
 SRC_DIR := src
 OBJ_DIR := build_win
@@ -21,7 +21,8 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
 	$(CC) $(CXXFLAGS) -c $< -o $@
 
 $(OBJ_DIR):
-	mkdir -p $(OBJ_DIR)
+	if not exist $(OBJ_DIR) mkdir $(OBJ_DIR)
 
 clean:
-	rm -rf $(OBJ_DIR) $(BIN)
+	if exist $(OBJ_DIR) rmdir /s /q $(OBJ_DIR)
+	if exist $(BIN) del /q $(BIN)
