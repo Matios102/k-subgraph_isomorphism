@@ -3,6 +3,8 @@
 #include <stdexcept>
 #include <sstream>
 #include <iostream>
+#include <chrono>
+#include <thread>
 
 #ifndef _WIN32
 #include <unistd.h>
@@ -129,22 +131,79 @@ void print_result(const Graph &G,
     }
 #endif
 
-    auto print_matrix = [&](const Matrix &M, bool highlight)
+    const std::vector<std::string> palette = {
+        "\x1b[31m", "\x1b[32m", "\x1b[33m", "\x1b[34m", "\x1b[35m", "\x1b[36m",
+        "\x1b[91m", "\x1b[92m", "\x1b[93m", "\x1b[94m", "\x1b[95m", "\x1b[96m",
+        "\x1b[41m\x1b[30m", "\x1b[42m\x1b[30m", "\x1b[43m\x1b[30m", "\x1b[44m\x1b[97m",
+        "\x1b[45m\x1b[97m", "\x1b[46m\x1b[30m", "\x1b[100m\x1b[97m", "\x1b[104m\x1b[30m"};
+    const std::string dimColor = "\x1b[90m";
+    const std::string titleColor = "\x1b[95m";
+    const std::string resetColor = "\x1b[0m";
+
+    auto rainbow_line = [&](int width)
     {
-        for (int i = 0; i < H.n; ++i)
+        if (!colorEnabled)
         {
-            for (int j = 0; j < H.n; ++j)
+            for (int i = 0; i < width; ++i)
+                out << "-";
+            out << "\n";
+            return;
+        }
+        const char symbols[] = {'#', '*', '+', '@', '%', '&'};
+        for (int i = 0; i < width; ++i)
+        {
+            const std::string &c = palette[i % palette.size()];
+            char sym = symbols[i % (sizeof(symbols) / sizeof(symbols[0]))];
+            out << c << sym;
+        }
+        out << resetColor << "\n";
+    };
+
+    if (colorEnabled)
+    {
+        const char spinnerFrames[] = {'|', '/', '-', '\\'};
+        for (int k = 0; k < 8; ++k)
+        {
+            char frame = spinnerFrames[k % 4];
+            const std::string &c = palette[k % palette.size()];
+            out << "\r" << c << "Color blast " << frame << resetColor;
+            out.flush();
+            std::this_thread::sleep_for(std::chrono::milliseconds(60));
+        }
+        out << "\r" << std::string(20, ' ') << "\r";
+    }
+
+    auto print_matrix_frame = [&](const Matrix &M, bool highlight, int offset)
+    {
+        int rows = static_cast<int>(M.size());
+        int cols = rows > 0 ? static_cast<int>(M[0].size()) : 0;
+        for (int i = 0; i < rows; ++i)
+        {
+            if (colorEnabled)
+            {
+                out << "\r\x1b[2K"; // clear line and carriage return
+            }
+            for (int j = 0; j < cols; ++j)
             {
                 bool added = highlight && extension[i][j] > 0;
-                if (colorEnabled && added)
+                if (colorEnabled)
                 {
-                    out << "\x1b[31m" << M[i][j] << "\x1b[0m";
+                    if (added)
+                    {
+                        const std::string &c = palette[(i * 7 + j * 5 + offset) % palette.size()];
+                        out << c << M[i][j] << resetColor;
+                    }
+                    else
+                    {
+                        const std::string &c = palette[(i + j + 3 + offset) % palette.size()];
+                        out << dimColor << c << M[i][j] << resetColor;
+                    }
                 }
                 else
                 {
                     out << M[i][j];
                 }
-                if (j + 1 < H.n)
+                if (j + 1 < cols)
                 {
                     out << ' ';
                 }
@@ -153,14 +212,41 @@ void print_result(const Graph &G,
         }
     };
 
-    out << "Input:\n";
-    out << "G:\n";
-    print_matrix(G.A, false);
-    out << "H:\n";
-    print_matrix(H.A, false);
+    auto print_block = [&](int offset)
+    {
+        rainbow_line(40);
+        out << (colorEnabled ? titleColor : "") << "Input (G):" << (colorEnabled ? resetColor : "") << "\n";
+        print_matrix_frame(G.A, false, offset);
+        out << (colorEnabled ? titleColor : "") << "Input (H):" << (colorEnabled ? resetColor : "") << "\n";
+        print_matrix_frame(H.A, false, offset + 2);
+        rainbow_line(40);
+        out << (colorEnabled ? titleColor : "") << "Extension of H (colored additions):" << (colorEnabled ? resetColor : "") << "\n";
+        print_matrix_frame(extendedH.A, true, offset + 4);
+        rainbow_line(40);
+    };
 
-    out << "Extension of H:\n";
-    print_matrix(extendedH.A, true);
+    // Initial print
+    print_block(0);
+
+    if (colorEnabled)
+    {
+        int blockLines = 3                  // rainbow lines
+                         + 3                // section titles
+                         + G.n + H.n + H.n; // matrices
+        const int frames = 100;
+        for (int f = 0; f < frames; ++f)
+        {
+            int offset = f * 5;
+            // Move cursor up to the start of the block
+            out << "\x1b[" << blockLines << "A";
+            print_block(offset);
+            out.flush();
+            if (f + 1 < frames)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(80));
+            }
+        }
+    }
 
     out << "Metric: " << cost << "\n";
 }
