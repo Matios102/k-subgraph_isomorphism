@@ -347,14 +347,5 @@ void run_approx_algorithm(const std::string &inputPath,
         out = &fileOut;
     }
 
-    for (int i = 0; i < H.n; ++i)
-    {
-        for (int j = 0; j < H.n; ++j)
-        {
-            (*out) << extension.A[i][j];
-            if (j + 1 < H.n)
-                (*out) << " ";
-        }
-        (*out) << "\n";
-    }
+    print_result(G, H, extension.A, *out, true);
 }

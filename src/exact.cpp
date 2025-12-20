@@ -210,14 +210,5 @@ void run_exact_algorithm(const std::string &inputPath,
         out = &fileOut;
     }
 
-    for (int i = 0; i < H.n; ++i)
-    {
-        for (int j = 0; j < H.n; ++j)
-        {
-            (*out) << minExtension[i][j] + H.A[i][j];
-            if (j + 1 < H.n)
-                (*out) << " ";
-        }
-        (*out) << "\n";
-    }
+    print_result(G, H, minExtension, *out, true);
 }
