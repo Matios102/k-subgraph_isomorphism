@@ -49,4 +49,6 @@ experiments/
 ```
 
 ### g++ compilation command
+```
 g++ -std=c++20 -Wall -Iinclude -static-libgcc -static-libstdc++ src/approx.cpp src/exact.cpp src/io.cpp src/main.cpp -o aac.exe
+```
